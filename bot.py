@@ -17,21 +17,32 @@ logging.basicConfig(level=logging.INFO)
 # UPS API Endpoint
 UPS_TRACKING_URL = "https://webapis.ups.com/track/api/Track/GetStatus?loc=en_US"
 
-# Required Headers and Cookies (Replace with valid values)
+# Updated Headers
 HEADERS = {
     "accept": "application/json, text/plain, */*",
+    "accept-language": "en-US,en;q=0.9",
     "content-type": "application/json",
     "origin": "https://www.ups.com",
+    "priority": "u=1, i",
+    "sec-ch-ua": '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133")',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"macOS"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-site",
     "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-    "x-xsrf-token": "CfDJ8Jcj9GhlwkdBikuRYzfhrpJFrozEvUvjM7tJuQVH0juFKeWymJflbCWY8pCacWS_r0Np8lL8lSgcYuJyrF6X_Gt2snuYKnQMg7l3DFw43Mrz-hXtZNQKk0yAeBLKVnrj_l3U-W1BxSdTP_Ctw4oZSEI",
+    "x-xsrf-token": "CfDJ8Jcj9GhlwkdBikuRYzfhrpKAXoNi5j8s9t25w4ANNbIgblOalNSAXURCiml4Msavo4Q6IFZHu7JORCVgS_OHtvVK7a69vkNladh-yy4hSPo7_Uxk87gx2JfbWYdhn1EWdN6vyzmAF8bBIJatPFy3goo",
 }
 
+# Updated Cookies
 COOKIES = {
     "sharedsession": "6b5e72c8-5c10-4d65-9a22-06cd7669b312:m",
     "X-CSRF-TOKEN": "CfDJ8Jcj9GhlwkdBikuRYzfhrpJGL-XIYUxBOM3KoU9n4J0J3OEhijI70KbxAOtF2YJ-hlomkXhX8JUb4YWAKN5N8txKXwObox02HM3qT7oShphnqCaE1voSHggF3GZG8whlxFZOqmrpduCaIQDMS8WHq4c",
+    "PIM-SESSION-ID": "jCSE3iYaAHsnDHqR",
+    "at_check": "true",
 }
 
-# Request Payload
+# Updated Request Payload
 DATA = {
     "Locale": "en_US",
     "TrackingNumber": ["1ZA03R690337671312"],
@@ -39,6 +50,7 @@ DATA = {
     "Requester": "st/trackdetails",
     "returnToValue": "",
 }
+
 
 # Slack Bot Tokens
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
@@ -56,7 +68,6 @@ handler = SlackRequestHandler(slack_app)
 # Stores last tracking status to avoid duplicate messages
 last_status = None
 
-
 def fetch_ups_status():
     """Fetch the latest UPS tracking status from the API and parse the response."""
     try:
@@ -67,14 +78,17 @@ def fetch_ups_status():
         if response.status_code == 200:
             result = response.json()
 
+            # Ensure response contains tracking details
             if "trackDetails" in result and len(result["trackDetails"]) > 0:
                 track_info = result["trackDetails"][0]
 
+                # Extract general package status
                 package_status = track_info.get("packageStatus", "Unknown Status")
 
+                # Extract latest tracking update
                 shipment_progress = track_info.get("shipmentProgressActivities", [])
                 if shipment_progress:
-                    latest_update = shipment_progress[0]  # Most recent status
+                    latest_update = shipment_progress[0]  # First entry is the most recent
                     status_description = latest_update.get("activityScan", "No recent update.")
                     event_location = latest_update.get("location", "Unknown Location")
                     event_date = latest_update.get("date", "Unknown Date")
@@ -97,10 +111,10 @@ def fetch_ups_status():
         return f"⚠️ Error: UPS API returned status {response.status_code}"
 
     except requests.exceptions.Timeout:
-        logging.error("UPS API request timed out.")
+        print("Error: UPS request timed out. Retrying in next cycle...")
         return "⚠️ UPS API request timed out. Please try again later."
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching UPS status: {e}")
+        print(f"Error fetching UPS status: {e}")
         return "⚠️ Failed to fetch UPS tracking status."
 
 
@@ -119,12 +133,13 @@ def track_package():
 def handle_message_events(event, say):
     """Respond when a user sends a message in the channel."""
     text = event.get("text", "").lower()
+    print("text", text)
 
-    if "track my package" in text or "where is my package" in text or f"<@{slack_app.client.auth_test()['user_id']}>" in text:
+    if "hoodie" in text:
         say(fetch_ups_status())
 
 
-@app.command("/track")
+@slack_app.command("/track")
 def handle_track_command(ack, respond):
     """Handles the `/track` command."""
     ack()
@@ -141,4 +156,5 @@ Thread(target=track_package, daemon=True).start()
 
 # Start Flask App
 if __name__ == "__main__":
+    print("Bot is running")
     app.run(host="0.0.0.0", port=3000)  # Listens on all interfaces
