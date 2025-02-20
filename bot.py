@@ -139,16 +139,20 @@ def handle_message_events(event, say):
         say(fetch_ups_status())
 
 
-@slack_app.command("/track")
-def handle_track_command(ack, respond):
-    """Handles the `/track` command."""
-    ack()
-    status = fetch_ups_status()
-    if status:
-        respond(status)
-    else:
-        respond("⚠️ Could not retrieve tracking information at this time.")
+@app.route("/slack/track", methods=["POST"])
+def slack_track_command():
+    """Handles the /track slash command from Slack."""
+    data = request.form
+    user_id = data.get("user_id")
+    response_url = data.get("response_url")
 
+    tracking_status = fetch_ups_status()
+
+    # Send an immediate acknowledgment
+    return jsonify({
+        "response_type": "in_channel",
+        "text": f"📦 *UPS Tracking Status for <@{user_id}>:*\n{tracking_status}"
+    })
 
 
 # Start tracking in a separate thread
