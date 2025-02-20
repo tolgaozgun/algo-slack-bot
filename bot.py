@@ -124,10 +124,16 @@ def handle_message_events(event, say):
         say(fetch_ups_status())
 
 
-@app.route("/slack/events", methods=["POST"])
-def slack_events():
-    """Route for Slack event subscription."""
-    return handler.handle(request)
+@app.command("/track")
+def handle_track_command(ack, respond):
+    """Handles the `/track` command."""
+    ack()
+    status = fetch_ups_status()
+    if status:
+        respond(status)
+    else:
+        respond("⚠️ Could not retrieve tracking information at this time.")
+
 
 
 # Start tracking in a separate thread
