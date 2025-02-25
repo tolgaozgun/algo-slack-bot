@@ -17,6 +17,8 @@ logging.basicConfig(level=logging.INFO)
 # UPS API Endpoint
 UPS_TRACKING_URL = "https://webapis.ups.com/track/api/Track/GetStatus?loc=en_US"
 
+HUMAN_READABLE_URL = "https://www.ups.com/track?track=yes&trackNums=1ZA03R690337671312&loc=en_US&requester=ST/trackdetails"
+
 # Updated Headers
 HEADERS = {
     "accept": "application/json, text/plain, */*",
@@ -99,10 +101,10 @@ def fetch_ups_status():
                         f"📅 *Latest Update:* {status_description}\n"
                         f"📍 *Location:* {event_location}\n"
                         f"🕒 *Date & Time:* {event_date} {event_time}\n"
-                        f"🔗 [Track Package]({UPS_TRACKING_URL})"
+                        f"🔗 Track Package: {HUMAN_READABLE_URL}"
                     )
                 else:
-                    status_message = f"📦 *UPS Tracking Update:* {package_status}\n🔗 [Track Package]({UPS_TRACKING_URL})"
+                    status_message = f"📦 *UPS Tracking Update:* {package_status}\n🔗 Track Package: {HUMAN_READABLE_URL}"
 
                 return status_message
 
